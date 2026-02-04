@@ -1,92 +1,118 @@
+/**
+ * Universidad de La Laguna
+ * Escuela Superior de Ingeniería y Tecnología
+ * Grado en Ingeniería Informática
+ * Inteligencia Artificial Avanzada
+ *
+ * @author Andrés David Riera Rivera, Alejandro Feo Martín e Isaac Domínguez Fajardo
+ * @since Feb 04 2026
+ * @brief Implementación de la clase Data.
+ */
+
 #include "data.h"
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <iomanip>
+#include <bitset>
 
-Data::Data() : variable_count(0) {}
-
-void Data::inicializarEstructura(int n) {
-    variable_count = n;
-    // Punto 3: Tamaño 2^N para p[k]
-    probability_distribution.assign(1 << n, 0.0);
-}
-
-// Implementación manual del cálculo del índice k 
-int Data::stringBinarioAInt(const std::string& bin) const {
-    int decimal = 0;
-    int base = 1;
-    // Recorremos de derecha a izquierda: Bit 0 (derecha) es X1 
-    for (int i = bin.length() - 1; i >= 0; --i) {
-        if (bin[i] == '1') {
-            decimal += base;
-        }
-        base *= 2;
-    }
-    return decimal;
-}
-
+/**
+ * @brief Carga una distribución desde un archivo CSV.
+ * @param ruta_archivo Ruta del archivo.
+ */
 void Data::cargarArchivo(const std::string& ruta_archivo) {
-    std::ifstream ifs(ruta_archivo);
-    if (!ifs.is_open()) {
-        std::cerr << "Error al abrir el archivo." << std::endl;
-        return;
+  std::ifstream ifs;
+  ifs.open(ruta_archivo, std::ios_base::in);
+  if (!ifs.is_open()) {
+    std::cerr << "Error al abrir el archivo." << std::endl;
+    return;
+  }
+  int line_count{0};
+  std::string linea;
+  while (std::getline(ifs, linea)) {
+    std::string binary = "";
+    std::string prob_str = "";
+
+    int counter{0};
+    while (linea[counter] != ',') {
+        binary += linea[counter];
+        ++counter;
     }
-
-    std::string linea;
-    bool primera_linea = true;
-
-    while (std::getline(ifs, linea)) {
-        if (linea.empty()) continue;
-
-        std::string binary_str = "";
-        std::string prob_str = "";
-        int counter = 0;
-        while (counter < linea.size() && linea[counter] != ',') {
-            binary_str += linea[counter];
-            ++counter;
-        }
-        ++counter; // Saltamos la coma
-        while (counter < linea.size()) {
-            prob_str += linea[counter];
-            ++counter;
-        }
-
-        if (primera_linea) {
-            inicializarEstructura(binary_str.length()); 
-            primera_linea = false;
-        }
-
-        // Convertimos la máscara al índice decimal k 
-        int k = stringBinarioAInt(binary_str);
-        if (k < probability_distribution.size()) {
-            probability_distribution[k] = std::stod(prob_str); 
-        }
+    ++counter;
+    while (counter < linea.size()) {
+        prob_str += linea[counter];
+        ++counter;
     }
-    ifs.close();
+    ++line_count;
+    if (line_count == 1) {
+      int n = binary.size();
+      variable_count = n;
+      eraseChangeSize(variable_count);
+    }
+    probability(std::stoi(binary)) = std::stod(prob_str);
+  }
 }
 
-void Data::generacionAleatoria(int n) {
-    inicializarEstructura(n);
-    double suma = 0.0;
-    for (int i = 0; i < (1 << n); ++i) {
-        double val = static_cast<double>(rand() % 100) + 1.0; // Evitamos 0s totales
-        probability_distribution[i] = val;
-        suma += val;
-    }
-    // Normalización: suma de todas debe ser 1 
-    for (double &p : probability_distribution) {
-        p /= suma;
-    }
+/**
+ * @brief Redimensiona el vector de probabilidades, borrando sus elementos.
+ * @param amount_variables Número de variables.
+ */
+void Data::eraseChangeSize(int amount_variables) {
+  probability_distribution.clear();
+  probability_distribution.resize(pow(2, amount_variables));
 }
 
-void Data::mostrarDistribucion() const {
-    std::cout << "\n--- Distribución Conjunta Cargada ---" << std::endl;
-    for (int i = 0; i < (int)probability_distribution.size(); ++i) {
-        std::cout << "Índice " << i << ": " << std::fixed << std::setprecision(5) 
-                  << probability_distribution[i] << std::endl;
-    }
+/**
+ * @brief Convierte un número binario a decimal.
+ * @param binary Número binario representado como entero.
+ * @return Valor decimal equivalente.
+ */
+int Data::binaryToDecimal(int binary) {
+  int number = binary;
+  int decimal_value = 0;
+  int base = 1;
+  int temporal = number;
+  while (temporal) {
+    int last_digit = temporal % 10;
+    temporal = temporal / 10;
+    decimal_value += last_digit * base;
+    base = base * 2;
+  }
+  return decimal_value;
 }
 
-int Data::getVariableCount() const { return variable_count; }
-const std::vector<double>& Data::getProbs() const { return probability_distribution; }
+/**
+ * @brief Cambia el valor del número de variables de nuestra distribución 
+ * @param n Nuevo valor
+ */
+void Data::setVariableCount(int n) {
+  variable_count = n;
+}
+
+/**
+ * @brief Genera una distribución conjunta aleatoria 
+ * @param n Número de variables
+ */
+void Data::generateRandomDistribution(int n) {
+  setVariableCount(n);
+  eraseChangeSize(n);
+  std::vector<double> random_double;
+  double suma = 0.0;
+  for (int i = 0; i < pow(2, n); ++i) {
+    double number = static_cast<double>(std::rand() % 100);
+    suma += number;
+    random_double.push_back(number);
+  }
+  for (double& rnd : random_double) {
+    rnd = rnd / suma;
+  }
+
+  probability_distribution = random_double;
+}
+
+/**
+ * @brief Imprime en pantalla la distribución conjunta, el vector con sus componentes. 
+ */
+void Data::printDistribution() {
+  std::cout << std::endl << "- Distribución conjunta actual - " << std::endl;
+  for (int i = 0; i < probability_distribution.size(); ++i) {
+    std::cout << "p[" << i << "] : " << std::fixed << std::setprecision(5) 
+              << probability_distribution[i] << std::endl;
+  }
+}
