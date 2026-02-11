@@ -45,13 +45,8 @@ int main() {
   std::cout << "Número de variables: " << n_variables << std::endl;
   std::vector<bool> variables_condicionadas(n_variables, false);
   std::vector<bool> valores_condicionadas(n_variables, false);
-  std::cout << "Quieres añadir variables condicionadas?" << std::endl;
-  std::cout << "No (0)." << std::endl << "Sí (1)." << std::endl;
-  int opcion = 1;
-  std::cin >> opcion;
-  if (opcion == 1)  {
-    variablesCondicionadas(variables_condicionadas, valores_condicionadas, n_variables);
-  }
+  variablesCondicionadas(variables_condicionadas, valores_condicionadas, n_variables);
+
   // imprimir variables condicionadas
   int n_condicionadas = 0;
   std::cout << "Variables condicionadas (valor): ";
