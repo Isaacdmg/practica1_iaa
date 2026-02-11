@@ -45,7 +45,7 @@ void Data::cargarArchivo(const std::string& ruta_archivo) {
       variable_count = n;
       eraseChangeSize(variable_count);
     }
-    probability(std::stoi(binary)) = std::stod(prob_str);
+    probability(std::stol(binary)) = std::stod(prob_str);
   }
 }
 
