@@ -18,7 +18,11 @@
 #include <cmath>
 #include <string>
 #include <ctime>
+#include <bitset>
+
+
 #include "data.h"
+#include "funciones.h"
 
 
 /**
@@ -29,95 +33,45 @@
  * @return int: 0 si todo va bien, 1 si hay error.
  */
 int main() {
-  // interfaz inicial
-  std::cout << "Generar (1) o cargar (2) tabla" << std::endl;
-  int opcion;
-  std::cin >> opcion;
   Data datos;
-  if (opcion == 1) {
-    int n_variables;
-    std::cout << "Introduzca el número de variables: ";
-    std::cin >> n_variables;
-    // semilla para el numero aleatorio
-    std::srand(std::time(nullptr));
-    datos.generateRandomDistribution(n_variables);
-  } else if (opcion == 2) {
-    std::string ruta_archivo;
-    std::cout << "Introduzca la ruta del archivo: ";
-    std::cin >> ruta_archivo;
-    datos.cargarArchivo(ruta_archivo);
-  } else {
-    std::cerr << "Opción inválida" << std::endl;
-    return 1;
-  }
+  // interfaz inicial
+  interfazInicial(datos);
 
+  // Imprimir vector de distribución de probabilidad
   datos.printDistribution();
   
   // selección variables condicionadas
   int n_variables{datos.getVariableCount()};
   std::cout << "Número de variables: " << n_variables << std::endl;
   std::vector<bool> variables_condicionadas(n_variables, false);
-  std::vector<int> valores_condicionadas(n_variables, 0);
-  opcion = -1;
-  while (opcion != 0) {
-    int variable;
-    std::cout << "Seleccione una variable condicionada: ";
-    std::cin >> variable;
-    if (variable > n_variables || variable <= 0) {
-      std::cerr << "Error: variable no existente" << std::endl;
-      continue;
-    }
-    variables_condicionadas[variable - 1] = true;
-    
-    // asignar valor a la variable
-    int valor = -1;
-    while (valor != 0 && valor != 1) {
-      std::cout << "Asigne un valor a la variable (0 o 1): ";
-      std::cin >> valor;
-      if (valor != 0 && valor != 1) {
-        std::cerr << "Error: valor inválido" << std::endl;
-      } else {
-        valores_condicionadas[variable - 1] = valor;
-      }
-    }
-    
-    std::cout << "Se ha añadido la variable X" << variable << " como variable condicionada con el valor " << valor << std::endl;
+  std::vector<bool> valores_condicionadas(n_variables, false);
+  variablesCondicionadas(variables_condicionadas, valores_condicionadas, n_variables);
 
-    std::cout << "Quiere añadir otra variable condicionada?" << std::endl << "No (0)." << std::endl << "Sí (1)." << std::endl;
-    std::cin >> opcion;
-  }
-
+  // imprimir variables condicionadas
+  int n_condicionadas = 0;
   std::cout << "Variables condicionadas (valor): ";
   for (int i = 0; i < variables_condicionadas.size(); i++) {
     if(variables_condicionadas[i]) {
-      std::cout << "X" << i + 1 << " (" << valores_condicionadas[i] << ") ";
+      std::cout << "X" << n_variables - i << " (";
+      if (valores_condicionadas[i]) {
+        std::cout << "1) ";
+      } else {
+        std::cout << "0) ";
+      }
+      n_condicionadas++;
     }
   }
   std::cout << std::endl;
 
   // selección variables de interés
   std::vector<bool> variables_interes(n_variables, false);
-  opcion = -1;
-  while (opcion != 0) {
-    int variable;
-    std::cout << "Seleccione una variable de interés: ";
-    std::cin >> variable;
-    if (variable > n_variables || variable <= 0) {
-      std::cout << "Error: variable no existente" << std::endl;
-      continue;
-    }
-    variables_interes[variable - 1] = true;
+  variablesDeInteres(variables_interes, n_variables, variables_condicionadas);
 
-    std::cout << "Se ha añadido la variable X" << variable << " como variable de interés" << std::endl;
-    
-    std::cout << "Quiere añadir otra variable de interés?" << std::endl << "No (0)." << std::endl << "Sí (1)." << std::endl;
-    std::cin >> opcion;
-  }
-  
+  // imprimir variables de interés
   std::cout << "Variables de interés: ";
   for (int i = 0; i < variables_interes.size(); i++) {
     if(variables_interes[i]) {
-      std::cout << "X" << i + 1 << " ";
+      std::cout << "X" << n_variables - i << " ";
     }
   }
   std::cout << std::endl;
@@ -132,11 +86,45 @@ int main() {
   std::cout << "Variables a marginalizar: ";
   for (int i = 0; i < variables_a_marginalizar.size(); i++) {
     if(variables_a_marginalizar[i]) {
-      std::cout << "X" << i + 1 << " ";
+      std::cout << "X" << n_variables - i << " ";
     }
   }
   std::cout << std::endl;
+  
+  int variablesCond = boolVectorToBinary(variables_condicionadas);
+  int valoresCond = boolVectorToBinary(valores_condicionadas);
+  int variablesInteres = boolVectorToBinary(variables_interes);
+  
+  clock_t inicio = clock();
+  std::vector<double> probabilidades_condicionadas = datos.prob_cond_bin(variablesCond,
+                                                                          valoresCond,
+                                                                         variablesInteres);
+  clock_t fin = clock();
+  double tiempo_segundos = double(fin - inicio) / CLOCKS_PER_SEC;
+                                              
+  
+  // imprimir las probabilidades condicionadas                                                                       
+  // cabecera
+  int n_interes = 0;
+  for (int i = 0; i < variables_interes.size(); ++i){
+    if(variables_interes[i]) {
+      std::cout << "X" << n_variables - i << " ";
+      n_interes++;
+    }
+  }
+  std::cout << "probabilidad" << std::endl;
+  // valores tabla
+  for (int i = 0; i < probabilidades_condicionadas.size(); ++i) {
+    imprimirBinario(i, n_interes);
+    std::cout << "  " << probabilidades_condicionadas[i] << std::endl;
+  }
+
+  // Datos para informe
+  std::cout << "Número de variables: " << n_variables << std::endl;
+  std::cout << "Número de variables de interés: " << n_interes << std::endl;
+  std::cout << "Número de variables condicionadas: " << n_condicionadas << std::endl;
+  std::cout << std::fixed << std::setprecision(6);
+  std::cout << "Tiempo de ejecución de la función prob_cond_bin: " << tiempo_segundos  << " segundos" << std::endl;
 
   return 0;
 }
-

@@ -20,6 +20,9 @@
 #include <string>
 #include <iomanip>
 
+int binaryToDecimal(int binary_literal);
+int boolVectorToBinary(std::vector<bool> boolean_vector);
+
 /**
  * @class Data
  * @brief Representa una distribución de probabilidad conjunta sobre variables binarias.
@@ -37,10 +40,11 @@ class Data {
   const std::vector<double>& getProbs() { return probability_distribution; };
   void printDistribution();
   void generateRandomDistribution(int n);
+  std::vector<double> prob_cond_bin(int maskC, int valC, int maskI);
+  
   
  private:
   std::vector<double> probability_distribution;
-  int binaryToDecimal(int binary);
   int variable_count{0};
 };
 
